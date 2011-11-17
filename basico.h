@@ -13,15 +13,25 @@
 //   GNU General Public License for more details.
 // -----------------------------------------------------------------------
 
-//códigos de retorno de fun��o
-#define FIM_OK     0
-#define FIM_FALHA  1
-#define REPETIR    2
-#define DRV_FUNC_NOT_FOUND 3
-
+//cÃ³digos de retorno de funï¿½ï¿½o
+enum {
+    FIM_OK,
+    FIM_FALHA,
+    REPETIR,
+    DRV_FUNC_NOT_FOUND
+};
+  
+//define ponteiro vazio
+#define NULL    0
 
 //tamanhos maximos
 #define MIN_INT     -30000
+
+//funÃ§Ãµes de bit
+#define BitSet(arg,bit) ((arg) |= (1<<bit))
+#define BitClr(arg,bit) ((arg) &= ~(1<<bit)) 
+#define BitFlp(arg,bit) ((arg) ^= (1<<bit)) 
+#define BitTst(arg,bit) ((arg) & (1<<bit)) 
 
 
 //funções de bit
