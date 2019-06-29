@@ -1,36 +1,58 @@
-/*
-   File:   ctrdrv_prm.h
-   Author: rmaax
+// -----------------------------------------------------------------------
+//   ddCtr_prm.h -> parâmetros da controladora, e drivers implementados
+//   Autor:  Rodrigo Maximiano Antunes de Almeida
+//          rodrigomax at unifei.edu.br
+// -----------------------------------------------------------------------
+//   This program is free software; you can redistribute it and/or modify
+//   it under the terms of the GNU General Public License as published by
+//   the Free Software Foundation; version 2 of the License.
+//
+//   This program is distributed in the hope that it will be useful,
+//   but WITHOUT ANY WARRANTY; without even the implied warranty of
+//   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//   GNU General Public License for more details.
+// -----------------------------------------------------------------------
 
-   Created on 14 de Abril de 2011, 09:56
- */
+#ifndef ddCtr_prm_h
+    #define ddCtr_prm_h
 
-#ifndef ctrdrv_prm_h
-    #define ctrdrv_prm_h
-//quantidade máxima de drivers disponíveis ao mesmo tempo
+    // quantidade máxima de drivers disponíveis para o sistema simultaneamente
     #define QNTD_DRV 20
 
-    #include "drvGenerico.h"
+    // é necessário para incluir todos os arquivos de drivers
+    #include "drvLed.h"
     #include "drvInterrupt.h"
     #include "drvTimer.h"
     #include "drvLcd.h"
     #include "drvAdc.h"
+    #include "drvSerial.h"
+    #include "drvTeclado.h"
+    #include "drvDisp7seg.h"
 
-enum {
-    DRV_GEN,
-    DRV_INTERRUPT,
-    DRV_TIMER,
-    DRV_LCD,
-    DRV_ADC,
-    DRV_END /*DRV_END should always be the last*/
-};
-//the functions to get the drivers should be put in the same order as in the enum
-static ptrGetDrv drvGetFunc[DRV_END] = {
-    getGenericoDriver,
-    getInterruptDriver,
-    getTimerDriver,
-    getLCDDriver,
-    getAdcDriver
-};
+    // este enumerado auxilia o desenvolvedor/usuário a acessar os drivers
+    enum {
+        DRV_LED,
+        DRV_INTERRUPT,
+        DRV_TIMER,
+        DRV_LCD,
+        DRV_ADC,
+        DRV_SERIAL,
+        DRV_TECLADO,
+        DRV_DISP7SEG,
+        DRV_END /* DRV_END deve sempre ser o último, para facilitar o controle da quantidade de drivers */
+    };
 
-#endif // ctrdrv_prm_h
+    // as funções para obter os drivers devem ser inseridas na mesma ordem que o enumerado acima
+    static ptrGetDrv drvGetFunc[DRV_END] = {
+        getLedDriver,
+        getInterruptDriver,
+        getTimerDriver,
+        getLCDDriver,
+        getAdcDriver,
+        getSerialDriver,
+        getTecladoDriver,
+        getDisp7segDriver
+    };
+
+#endif // ddCtr_prm_h
+
