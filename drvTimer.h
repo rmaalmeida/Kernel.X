@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------
-//   timer.h -> fun��es para acesso ao timer 0
+//   drvTimer.h -> header das definições do driver do Timer 0
 //   Autor:  Rodrigo Maximiano Antunes de Almeida
 //          rodrigomax at unifei.edu.br
 // -----------------------------------------------------------------------
@@ -15,14 +15,21 @@
 
 #ifndef DRVTIMER_H
     #define DRVTIMER_H
-
+    #include "basico.h"
     #include "ddCtr_types.h"
 
-enum {
-    TMR_IS_END, TMR_WAIT, TMR_RESET, TMR_START, TMR_INT_EN, TMR_END
-};
+    //apenas retorna o "objeto" do driver
+    driver* getTimerDriver(void);
 
-//apenas retorna o "objeto" do driver
-driver* getTimerDriver(void);
+    // define os identificadores das funções do driver
+    enum {
+        TMR_IS_END,
+        TMR_WAIT,
+        TMR_RESET,
+        TMR_START,
+        TMR_INT_EN,
+        TMR_END
+    };
 
 #endif //DRVTIMER_H
+

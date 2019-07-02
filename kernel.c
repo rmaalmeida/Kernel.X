@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------
-//   kernel.c -> fun��es para gerenciamento do kernel
+//   kernel.c -> funções para gerenciamento do kernel
 //   Autor:  Rodrigo Maximiano Antunes de Almeida
 //          rodrigomax at unifei.edu.br
 // -----------------------------------------------------------------------
@@ -15,75 +15,87 @@
 
 
 /*
-Do manual do SDCC (http://sdcc.sourceforge.net/doc/sdccman.html/node183.html):
+De acordo com o manual do SDCC (http://sdcc.sourceforge.net/doc/sdccman.html/node183.html):
 
-"structures and unions cannot be assigned values directly, cannot be passed as function parameters or assigned to each other and cannot be a return value from a function"
+Não pode ser realizada passagem de parâmetro por valor em struct e unions, somente passagem por referência!
  */
 
 #include "kernel.h"
-#include "basico.h"
-#include "ddCtr.h"
-//variaveis do kernel
-static process* pool[SLOT_SIZE];
-static volatile unsigned char start;
-static volatile unsigned char end;
 
+//variáveis do kernel
+static process* pool[SLOT_SIZE]; //'pool' de processos
+static volatile unsigned char start; //posição inicial do 'pool' de processos
+static volatile unsigned char end; //posição final do 'pool' de processos
+
+//inicializa o kernel em conjunto com a controladora de drivers
 char kernelInit(void) {
-    //the kernel initializates the driver controler
+    BitSet(OSCCON, 7) ; //'Idle mode' em caso de instrução SLEEP
     initCtrDrv();
     start = 0;
     end = 0;
-    return FIM_OK;
+    return OK;
 }
 
+//executa os processos do 'pool' de acordo com seus tempos de execução
 void kernelLoop(void) {
     unsigned char j;
     unsigned char next;
     process *tempProc;
     for (;;) {
         if (start != end) {
-            //Procura a pr�xima fun��o a ser executada com base no tempo
+            //Procura a próxima função a ser executada com base no tempo
             j = (start + 1) % SLOT_SIZE;
             next = start;
             while (j != end) {
                 if ((pool[j]->start) < (pool[next]->start)) {
                     next = j;
                 }
-                j = (j + 1) % SLOT_SIZE; //para poder incrementar e ciclar o j
+                j = (j + 1) % SLOT_SIZE; //para poder incrementar e ciclar o contador
             }
 
-            //troca e coloca o processo com menor tempo como o proxima
+            //troca e coloca o processo com menor tempo como o próximo
             tempProc = pool[next];
             pool[next] = pool[start];
             pool[start] = tempProc;
+            
             while ((pool[start]->start) > 0) {
-                //adicionar sleep aqui, acorda na int.
+                //coloca a cpu em modo de economia de energia
+                _asm
+                    SLEEP
+                _endasm ;
             }
 
-            //retorna se precisa repetir novamente ou n�o
-            if (pool[start]->function() == REPETIR) {
-                kernelAddProc(pool[start]);
+            //retorna se precisa repetir novamente ou não
+            switch (pool[start]->function()) {
+                case REPEAT:
+                    kernelAddProc(pool[start]);
+                    break;
+                case FAIL:
+                    break;
+                default:;
             }
-            //pr�xima fun��o
+            //próxima função
             start = (start + 1) % SLOT_SIZE;
         }
     }
 }
 
+//adiciona os processos no pool
 char kernelAddProc(process *func) {
-    //para poder adicionar um processo tem que existir espaco
+    //adiciona processo somente se houver espaço livre
     //o fim nunca pode coincidir com o inicio
-    if (((end + 1) % SLOT_SIZE) != start) {//se incrementar nessa condicao fim vai ficar igual a ini
-        //adiciona o novo processo e agenda para executar j�
+    if (((end + 1) % SLOT_SIZE) != start) {
+        //adiciona o novo processo e agenda para executar imediatamente
         func->start += func->period;
         pool[end] = func;
 
         end = (end + 1) % SLOT_SIZE;
-        return FIM_OK; //sucesso
+        return OK; //sucesso
     }
-    return FIM_FALHA; //falha
+    return FAIL; //falha
 }
 
+//atualiza os tempos de execução dos processos
 void kernelClock(void) {
     unsigned char i;
     i = start;
@@ -94,3 +106,4 @@ void kernelClock(void) {
         i = (i + 1) % SLOT_SIZE;
     }
 }
+

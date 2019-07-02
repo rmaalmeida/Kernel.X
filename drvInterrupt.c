@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------
-//   int.c -> fun��es para gerenciamento das interrup��es
+//   drvInterrupt.c -> implementação do driver de interrupção
 //   Autor:  Rodrigo Maximiano Antunes de Almeida
 //          rodrigomax at unifei.edu.br
 // -----------------------------------------------------------------------
@@ -12,67 +12,113 @@
 //   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 //   GNU General Public License for more details.
 // -----------------------------------------------------------------------
-#include "drvInterrupt.h"
-#include "basico.h"
 
+#include "drvInterrupt.h"
+
+// variável utilizada para auto-referência do driver
+static driver thisDrivers;
+
+// quantidade de funções neste driver
+static ptrFuncDrv this_functions[INT_END];
+
+// armazena o ponteiro para a função de interrupção
 typedef void (*intFunc)(void);
-//store the pointer to the interrupt function
+
+// cada ponteiro de função de interrupção deve ser inserida
 static intFunc adcInterrupt;
 static intFunc timerInterrupt;
-static intFunc serialRxInterrupt;
+static intFunc serialRxInterrupt ;
+static intFunc serialTxInterrupt ;
+static intFunc tecladoInterrupt ;
 
-static driver thisDrivers;
-static driver_functions this_functions[INT_END];
+// permite que ocorram interrupções
+// Por padronização, funções de drivers recebem parâmetros, mesmo que não os utilizem.
+char enableInterrupts(void *parameters) {
+    BitSet(INTCON, 7); //habilita todas as interrupções globais
+    BitSet(INTCON, 6); //habilita todas as interrupções de periféricos
+    return OK;
+}
 
+// rotinas de configuração das funções de retorno de interrupção dos drivers
 char setTimerInt(void *parameters) {
     timerInterrupt = (intFunc)parameters;
-    return FIM_OK;
+    return OK;
 }
 
 char setAdcInt(void *parameters) {
     adcInterrupt = (intFunc)parameters;
-    return FIM_OK;
+    return OK;
+}
+
+char setTecladoInt(void *parameters) {
+    tecladoInterrupt = (intFunc)parameters ;
+    return OK ;
 }
 
 char setSerialRxInt(void *parameters) {
     serialRxInterrupt = (intFunc)parameters;
-    return FIM_OK;
+    return OK;
 }
 
-char enableInterrupts(void *parameters) {
-    BitSet(INTCON, 7); //habilita todas as interrupções globais
-    BitSet(INTCON, 6); //habilita todas as interrupções de periféricos
-    return FIM_OK;
+char setSerialTxInt(void *parameters) {
+    serialTxInterrupt = (intFunc)parameters;
+    return OK;
 }
 
+// inicialização do driver
 char initInterrupt(void *parameters) {
-
     thisDrivers.drv_id = *((char*)parameters);
-    this_functions[INT_ADC_SET].func_ptr = setAdcInt;
-    this_functions[INT_TIMER_SET].func_ptr = setTimerInt;
-    this_functions[INT_SERIAL_SET].func_ptr = setSerialRxInt;
-    this_functions[INT_ENABLE].func_ptr = enableInterrupts;
+    this_functions[INT_ADC_SET] = setAdcInt;
+    this_functions[INT_TIMER_SET] = setTimerInt;
+    this_functions[INT_SERIAL_RXSET] = setSerialRxInt;
+    this_functions[INT_SERIAL_TXSET] = setSerialTxInt;
+    this_functions[INT_TECLADO_SET] = setTecladoInt ;
+    this_functions[INT_ENABLE] = enableInterrupts;
 
-    BitClr(RCON, 7); //desabilita IPEN (modo de compatibilidade)
+    // desabilita IPEN (modo de compatibilidade)
+    BitClr(RCON, 7);
 
-    return FIM_OK;
+    // desabilita as interrupções de todos os dispositivos
+    PIE1 = 0x00;
+
+    // desabilita as interrupções de todos os dispositivos
+    INTCON = 0x00;
+
+    return OK;
 }
 
+// função de auto-referência
 driver* getInterruptDriver(void) {
-    //to ensure that at least the init function will be known
     thisDrivers.drv_init = initInterrupt;
     thisDrivers.func_ptr = this_functions;
     return &thisDrivers;
 }
 
+// rotina de atendimento de interrupções
 void isr(void) interrupt 1 {
+
     if (BitTst(INTCON, 2)) {
         timerInterrupt();
-    } //Timer overflow
-    if (BitTst(PIR1, 5)) {
+    } // estouro de faixa do Timer
+
+    if (BitTst(PIE1, 5) && BitTst(PIR1, 5)) {
+        BitClr(PIR1, 5) ;
         serialRxInterrupt();
-    } //serial data recive
-    if (BitTst(PIR1, 6)) {
+    } // recepção de dados via serial
+
+    if (BitTst(PIE1, 4) && BitTst(PIR1, 4)) {
+        BitClr(PIR1, 4) ;
+        serialTxInterrupt();
+    } // envio de dados via serial
+
+    if (BitTst(INTCON, 3) && BitTst(INTCON, 0)) {
+        BitClr(INTCON, 0) ;
+        PORTD++;
+        tecladoInterrupt() ;
+    } // tecla do teclado matricial pressionada
+
+    if (BitTst(PIE1, 6) && BitTst(PIR1, 6)) {
         adcInterrupt();
-    } //ADC conversion finished
+    } // término da conversão de dados no conversor A/D
 }
+
